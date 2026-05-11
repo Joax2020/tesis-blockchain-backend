@@ -20,18 +20,25 @@ app.use(CookieParser());
 app.use(express.json());
 
 // Configuración de CORS única y limpia
+const ALLOWED_ORIGINS = [
+    'https://tesis-blockchain-frontend.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:5174'
+];
+
 app.use(cors({
     origin: function (origin, callback) {
-        const whitelist = [
-            process.env.FRONTEND_URL,
-            'https://tesis-blockchain-frontend-heiz.vercel.app', // URL exacta de tu Vercel
-            'http://localhost:5173',
-            'http://localhost:5174'
-        ];
-        // Permitir peticiones sin origen (como apps móviles o curl)
-        if (!origin || whitelist.indexOf(origin) !== -1) {
+        // Permite peticiones sin origin (Postman, curl, apps móviles)
+        if (!origin) return callback(null, true);
+        
+        // Limpiamos posible barra al final antes de comparar
+        const originLimpio = origin.replace(/\/$/, '');
+        
+        if (ALLOWED_ORIGINS.includes(originLimpio)) {
             callback(null, true);
         } else {
+            // LOG para ver exactamente qué origin está llegando
+            console.log(`🚫 CORS bloqueado. Origin recibido: "${origin}"`);
             callback(new Error('Bloqueado por CORS'));
         }
     },
@@ -39,6 +46,8 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
+
+app.options('*', cors()); // Responde a preflight requests para todas las rutas
 
 // Seguridad de encabezados
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } })); 
