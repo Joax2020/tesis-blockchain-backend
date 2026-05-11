@@ -3,9 +3,9 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const verificarToken = (req, res, next) => {
-
-    // ✅ AHORA: lees de la cookie
-    const token = req.cookies?.authToken;
+    // Lee del header: "Authorization: Bearer <token>"
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Extrae solo el token
 
     if (!token) {
         return res.status(401).json({ error: 'Acceso denegado. No autenticado.' });

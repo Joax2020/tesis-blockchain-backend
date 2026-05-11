@@ -106,22 +106,11 @@ const login = async (req, res) => {
         };
 
         // 🛡️ 3. Aseguramos el JWT_SECRET
-        const token = jwt.sign(
-            payload, 
-            process.env.JWT_SECRET, // ¡Ya no dejamos clave hardcodeada!
-            { expiresIn: '24h' }
-        );
-
-        res.cookie('authToken', token, { 
-    httpOnly: true, 
-    secure: true,          // Siempre true en producción cross-domain
-    sameSite: 'none',      // ✅ Permite cross-site con secure:true
-    maxAge: 24 * 60 * 60 * 1000
-});
+        const token = generateToken(user);
 
         res.json({ 
             message: 'Bienvenido', 
-            token: token, // 👈 ¡VUELVE A PONER EL TOKEN AQUÍ!
+            token, // 👈 ¡VUELVE A PONER EL TOKEN AQUÍ!
             user: { id: user._id, name: user.fullName, email: user.email, role: user.role } 
         });
     } catch (error) {
@@ -191,24 +180,11 @@ const googleLogin = async (req, res) => {
         }
 
         // 3. Generamos NUESTRA Pulsera VIP (JWT)
-        const token = jwt.sign(
-            { id: user._id, email: user.email, role: user.role }, 
-            process.env.JWT_SECRET, 
-            { expiresIn: '24h' }
-        );
-
-        // 4. Se lo enviamos a React
-        // ✅ CORRECTO
-        res.cookie('authToken', token, { 
-    httpOnly: true, 
-    secure: true,          // Siempre true en producción cross-domain
-    sameSite: 'none',      // ✅ Permite cross-site con secure:true
-    maxAge: 24 * 60 * 60 * 1000
-});
+        const token = generarToken(user);
 
         res.json({ 
             message: 'Bienvenido', 
-            token: token, // 👈 ¡VUELVE A PONER EL TOKEN AQUÍ!
+            token, // 👈 ¡VUELVE A PONER EL TOKEN AQUÍ!
             user: { id: user._id, name: user.fullName, email: user.email, role: user.role } 
         });
 
