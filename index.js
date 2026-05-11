@@ -11,9 +11,20 @@ const documentRoutes = require('./routes/documentRoutes');
 const CookieParser = require('cookie-parser'); // 👈 Para manejar cookies
 
 const app = express();
+app.set('trust proxy', 1); // 👈 Si estás detrás de un proxy (como en producción), esto es importante para que el rate limiter funcione correctamente
 app.use(CookieParser()); // 👈 Usamos el middleware para parsear las cookies
-// 🛡️ 1. Tomamos el puerto del .env o usamos 3000 por defecto
-const PORT = process.env.PORT || 3000; 
+
+app.use(cors({
+    origin: [process.env.FRONTEND_URL, 
+            'http://localhost:5173', 
+            'http://localhost:5174',
+        ], // Solo acepta peticiones de tu frontend
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Especifica los métodos HTTP permitidos
+    allowedHeaders: ['Content-Type', 'Authorization'] // Especifica los encabezados permitidos
+}));
+
+app.use(express.json());
 
 // 🛡️ 2. Middlewares de Seguridad Global
 // Helmet oculta información del servidor. crossOriginResourcePolicy en false permite que tu React cargue los PDFs.
@@ -34,8 +45,8 @@ app.use(express.json());
 // 🛡️ 3. Limitador de peticiones (Protección contra Fuerza Bruta)
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 10, // Limita cada IP a 20 peticiones de login/registro por ventana
-    message: 'Demasiados intentos desde esta IP, por favor intenta de nuevo después de 15 minutos.'
+    max: 50, // Limita cada IP a 50 peticiones de login/registro por ventana
+    message: 'Demasiados intentos, por favor intenta de nuevo después de 15 minutos.'
 });
 
 // Archivos Estáticos
@@ -55,8 +66,8 @@ const iniciarServidor = async () => {
         { processingStatus: 'error', processingMessage: 'Servidor reiniciado' }
     );
 
-    app.listen(PORT, () => {
-        console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`🚀 Servidor corriend en el puerto: ${PORT}`);
     });
 };
 
