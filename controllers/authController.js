@@ -10,23 +10,30 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID); // 👈 Tu variab
 // 📧 CONFIGURACIÓN DEL CARTERO (Nodemailer)
 // 📧 CONFIGURACIÓN DEL CARTERO (Nodemailer) - VERSIÓN MEJORADA
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     },
-    // Timeouts más largos para evitar problemas
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000
+    // Forzar IPv4
+    family: 4,  // <-- ESTO ES CLAVE: fuerza IPv4
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 30000,
+    debug: true,
+    logger: true
 });
 
 // Verificar la conexión al iniciar
-transporter.verify((error, success) => {
+transporter.verify(function(error, success) {
     if (error) {
         console.error('❌ Error de configuración de email:', error);
+        console.error('Código:', error.code);
+        console.error('Dirección:', error.address);
     } else {
-        console.log('✅ Servidor de email listo para enviar mensajes');
+        console.log('✅ Servidor de email configurado correctamente');
     }
 });
 
