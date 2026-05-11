@@ -1,6 +1,6 @@
 const { Pool } = require('pg');
 
-const urlSupabase = "postgresql://postgres.nkrwabawhafklmirinyv:TesisJoax2026Secure@aws-1-us-west-2.pooler.supabase.com:5432/postgres?pgbouncer=true"
+const urlSupabase = process.env.POSTGRES_URL;
 const pgPool = new Pool({ connectionString: urlSupabase, ssl: { rejectUnauthorized: false } }); // 👈 VITAL PARA SUPABASE
 
 // Función maestra para guardar los vectores de un documento

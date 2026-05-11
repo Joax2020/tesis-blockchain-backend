@@ -1,41 +1,26 @@
 // controllers/authController.js
 const User = require('../models/User');
 const jwt = require('jsonwebtoken'); // 👈 1. Importamos la fábrica de tokens
-const nodemailer = require('nodemailer'); // 👈 Importamos nodemailer
 const crypto = require('crypto'); // 👈 Importamos crypto (ya viene con Node.js)
 
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID); // 👈 Tu variable de entorno
+const { Resend } = require('resend');
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // 📧 CONFIGURACIÓN DEL CARTERO (Nodemailer)
 // 📧 CONFIGURACIÓN DEL CARTERO (Nodemailer) - VERSIÓN MEJORADA
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-    // Forzar IPv4
-    family: 4,  // <-- ESTO ES CLAVE: fuerza IPv4
-    connectionTimeout: 30000,
-    greetingTimeout: 30000,
-    socketTimeout: 30000,
-    debug: true,
-    logger: true
-});
 
-// Verificar la conexión al iniciar
-transporter.verify(function(error, success) {
-    if (error) {
-        console.error('❌ Error de configuración de email:', error);
-        console.error('Código:', error.code);
-        console.error('Dirección:', error.address);
-    } else {
-        console.log('✅ Servidor de email configurado correctamente');
-    }
-});
+const generarToken = (user) => {
+    return jwt.sign(
+        { id: user._id, email: user.email, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: '8h' }
+    );
+};
+
+
 
 const register = async (req, res) => {
     try {
@@ -84,14 +69,29 @@ const register = async (req, res) => {
 
         // Envío con async/await para manejar errores correctamente
         try {
-            const info = await transporter.sendMail(mailOptions);
-            console.log('✅ Correo enviado exitosamente a:', email);
-            console.log('📨 ID del mensaje:', info.messageId);
-        } catch (emailError) {
-            console.error('❌ ERROR DETALLADO al enviar correo:', emailError);
-            // No eliminamos el usuario, pero registramos el error
-            // Podrías guardar en una colección de "emails fallidos"
-        }
+    const { data, error: resendError } = await resend.emails.send({
+        from: 'Gestor Documental <onboarding@resend.dev>',
+        to: newUser.email,
+        subject: '🎓 Verifica tu cuenta en el Gestor Documental',
+        html: `
+            <div style="font-family: Arial, sans-serif; padding: 20px; text-align: center;">
+                <h2 style="color: #646cff;">¡Bienvenido, ${fullName}!</h2>
+                <p>Gracias por registrarte en nuestra plataforma descentralizada.</p>
+                <p>Para activar tu cuenta, haz clic en el siguiente botón:</p>
+                <a href="${enlaceVerificacion}" style="background-color: #2ecc71; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-top: 10px;">Verificar mi Correo</a>
+                <p style="margin-top: 20px; font-size: 0.8rem; color: #666;">Si el botón no funciona, copia este enlace:<br>${enlaceVerificacion}</p>
+            </div>
+        `
+    });
+
+    if (resendError) {
+        console.error('❌ Error Resend:', resendError);
+    } else {
+        console.log('✅ Correo enviado con Resend, ID:', data.id);
+    }
+} catch (emailError) {
+    console.error('❌ Error enviando correo:', emailError);
+}
         
         res.status(201).json({ 
             message: 'Registro exitoso. Revisa tu correo electrónico para verificar tu cuenta.',
