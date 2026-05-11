@@ -113,11 +113,11 @@ const login = async (req, res) => {
         );
 
         res.cookie('authToken', token, { 
-            httpOnly: true, 
-            secure: process.env.NODE_ENV === 'production', // En local será false, en la nube será true
-            sameSite: 'strict',
-            maxAge: 24 * 60 * 60 * 1000
-        }); 
+    httpOnly: true, 
+    secure: true,          // Siempre true en producción cross-domain
+    sameSite: 'none',      // ✅ Permite cross-site con secure:true
+    maxAge: 24 * 60 * 60 * 1000
+});
 
         res.json({ 
             message: 'Bienvenido', 
@@ -200,11 +200,11 @@ const googleLogin = async (req, res) => {
         // 4. Se lo enviamos a React
         // ✅ CORRECTO
         res.cookie('authToken', token, { 
-            httpOnly: true, 
-            secure: process.env.NODE_ENV === 'production', // En local será false, en la nube será true
-            sameSite: 'strict',
-            maxAge: 24 * 60 * 60 * 1000
-        }); 
+    httpOnly: true, 
+    secure: true,          // Siempre true en producción cross-domain
+    sameSite: 'none',      // ✅ Permite cross-site con secure:true
+    maxAge: 24 * 60 * 60 * 1000
+});
 
         res.json({ 
             message: 'Bienvenido', 

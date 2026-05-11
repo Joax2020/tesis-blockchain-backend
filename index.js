@@ -21,18 +21,27 @@ app.use(express.json());
 
 // Configuración de CORS única y limpia
 app.use(cors({
-    origin: [
-        process.env.FRONTEND_URL, 
-        'http://localhost:5173', 
-        'http://localhost:5174'
-    ],
+    origin: function (origin, callback) {
+        const whitelist = [
+            process.env.FRONTEND_URL,
+            'https://tesis-blockchain-frontend-heiz.vercel.app', // URL exacta de tu Vercel
+            'http://localhost:5173',
+            'http://localhost:5174'
+        ];
+        // Permitir peticiones sin origen (como apps móviles o curl)
+        if (!origin || whitelist.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Bloqueado por CORS'));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 
 // Seguridad de encabezados
-app.use(helmet({ crossOriginResourcePolicy: false })); 
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } })); 
 
 // 3. LIMITADORES
 const authLimiter = rateLimit({

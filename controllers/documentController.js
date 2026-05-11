@@ -142,17 +142,19 @@ const procesarFondo = async (id, owner, docType, date, rutaArchivo) => {
         await actualizarProgreso(85, "Sellando inmutabilidad en Blockchain...");
 
         try {
-            const { gateway, contract } = await connectToNetwork();
-            await contract.submitTransaction('CreateDocument', id, owner, docType, date);
-            await gateway.disconnect();
-        } catch (errorBlockchain) {
-            // 🛠️ CAMBIO 2: SI ES UN REINTENTO, LA BLOCKCHAIN DIRÁ "YA EXISTE". LO IGNORAMOS.
-            if (errorBlockchain.message && errorBlockchain.message.includes('ya existe')) {
-                console.log(`[Blockchain] El hash ${id} ya estaba sellado. Saltando paso...`);
-            } else {
-                throw errorBlockchain; // Si es otro error grave, explotamos normal
-            }
-        }
+    const { gateway, contract } = await connectToNetwork();
+    await contract.submitTransaction('CreateDocument', id, owner, docType, date);
+    await gateway.disconnect();
+} catch (errorBlockchain) {
+    if (errorBlockchain.message.includes('no disponible')) {
+        console.warn('⚠️ Blockchain omitida: no configurada en producción.');
+        // Continúa sin romper el flujo
+    } else if (errorBlockchain.message.includes('ya existe')) {
+        console.log(`[Blockchain] Hash ${id} ya sellado.`);
+    } else {
+        throw errorBlockchain;
+    }
+}
 
         // 5. PostgreSQL
         if (signal.aborted) throw new Error("Cancelado");
