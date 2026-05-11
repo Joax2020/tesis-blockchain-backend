@@ -5,7 +5,7 @@ const nodemailer = require('nodemailer'); // 👈 Importamos nodemailer
 const crypto = require('crypto'); // 👈 Importamos crypto (ya viene con Node.js)
 
 const { OAuth2Client } = require('google-auth-library');
-const client = new OAuth2Client(process.env.VITE_GOOGLE_CLIENT_ID); // 👈 Tu variable de entorno
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID); // 👈 Tu variable de entorno
 
 // 📧 CONFIGURACIÓN DEL CARTERO (Nodemailer)
 const transporter = nodemailer.createTransport({
@@ -169,7 +169,7 @@ const googleLogin = async (req, res) => {
         // 1. Verificamos que el token sea auténtico con los servidores de Google
         const ticket = await client.verifyIdToken({
             idToken: credential,
-            audience: process.env.VITE_GOOGLE_CLIENT_ID,
+            audience: process.env.GOOGLE_CLIENT_ID,
         });
 
         const payload = ticket.getPayload();
@@ -219,7 +219,11 @@ const googleLogin = async (req, res) => {
 };
 
 const logout = (req, res) => {
-    res.clearCookie('authToken');
+    res.clearCookie('authToken', {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none'   // 👈 debe coincidir exactamente con cuando se creó
+    });
     res.json({ message: 'Sesión cerrada.' });
 };
 
