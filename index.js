@@ -47,7 +47,7 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 
-app.options('*', cors()); // Responde a preflight requests para todas las rutas
+app.options('/{*path}', cors());
 
 // Seguridad de encabezados
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } })); 
