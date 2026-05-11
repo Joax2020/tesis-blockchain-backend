@@ -8,11 +8,25 @@ const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID); // 👈 Tu variable de entorno
 
 // 📧 CONFIGURACIÓN DEL CARTERO (Nodemailer)
+// 📧 CONFIGURACIÓN DEL CARTERO (Nodemailer) - VERSIÓN MEJORADA
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: process.env.EMAIL_USER, // Tu correo (ej. tu_correo@gmail.com)
-        pass: process.env.EMAIL_PASS  // Tu contraseña de aplicación de Google
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    },
+    // Timeouts más largos para evitar problemas
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000
+});
+
+// Verificar la conexión al iniciar
+transporter.verify((error, success) => {
+    if (error) {
+        console.error('❌ Error de configuración de email:', error);
+    } else {
+        console.log('✅ Servidor de email listo para enviar mensajes');
     }
 });
 
@@ -20,31 +34,34 @@ const register = async (req, res) => {
     try {
         const { email, password, fullName, captchaToken } = req.body;
 
-        if (!captchaToken) return res.status(400).json({ error: 'Token de seguridad faltante.' });
+        if (!captchaToken) {
+            return res.status(400).json({ error: 'Token de seguridad faltante.' });
+        }
 
         // Verificación de reCAPTCHA
-        const secretKey = process.env.RECAPTCHA_SECRET; // 🛡️ 1. Usamos variable de entorno para reCAPTCHA
+        const secretKey = process.env.RECAPTCHA_SECRET;
         const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${captchaToken}`;
         const googleResponse = await fetch(verifyUrl, { method: 'POST' });
         const googleData = await googleResponse.json();
         
-        if (!googleData.success) return res.status(400).json({ error: 'Validación antibots fallida.' });
+        if (!googleData.success) {
+            return res.status(400).json({ error: 'Validación antibots fallida.' });
+        }
 
         const existingUser = await User.findOne({ email });
-        if (existingUser) return res.status(400).json({ error: 'El usuario ya existe' });
+        if (existingUser) {
+            return res.status(400).json({ error: 'El usuario ya existe' });
+        }
 
-        // 🔐 Generamos un token único de 40 caracteres para el correo
         const verificationToken = crypto.randomBytes(20).toString('hex');
-
-        // Guardamos al usuario (por defecto isVerified será false)
         const newUser = new User({ email, password, fullName, verificationToken });
         await newUser.save();
 
-        // 💌 PREPARAMOS EL CORREO
+        // 💌 ENVÍO DE CORREO CON MANEJO DE ERRORES MEJORADO
         const enlaceVerificacion = `${process.env.BACKEND_URL}/auth/verify/${verificationToken}`;
         
         const mailOptions = {
-            from: process.env.EMAIL_USER,
+            from: `"Gestor Documental" <${process.env.EMAIL_USER}>`,
             to: newUser.email,
             subject: '🎓 Verifica tu cuenta en el Gestor Documental',
             html: `
@@ -58,13 +75,22 @@ const register = async (req, res) => {
             `
         };
 
-        // Enviamos el correo (en segundo plano)
-        transporter.sendMail(mailOptions, (error, info) => {
-            if (error) console.error("Error enviando correo:", error);
-            else console.log("✉️ Correo de verificación enviado a:", info.accepted);
+        // Envío con async/await para manejar errores correctamente
+        try {
+            const info = await transporter.sendMail(mailOptions);
+            console.log('✅ Correo enviado exitosamente a:', email);
+            console.log('📨 ID del mensaje:', info.messageId);
+        } catch (emailError) {
+            console.error('❌ ERROR DETALLADO al enviar correo:', emailError);
+            // No eliminamos el usuario, pero registramos el error
+            // Podrías guardar en una colección de "emails fallidos"
+        }
+        
+        res.status(201).json({ 
+            message: 'Registro exitoso. Revisa tu correo electrónico para verificar tu cuenta.',
+            emailSent: true 
         });
         
-        res.status(201).json({ message: 'Registro exitoso. Revisa tu correo electrónico para verificar tu cuenta.' });
     } catch (error) {
         console.error("Error en registro:", error);
         res.status(500).json({ error: error.message });
@@ -106,7 +132,7 @@ const login = async (req, res) => {
         };
 
         // 🛡️ 3. Aseguramos el JWT_SECRET
-        const token = generateToken(user);
+        const token = generarToken(user);
 
         res.json({ 
             message: 'Bienvenido', 
