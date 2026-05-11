@@ -19,6 +19,12 @@ app.set('trust proxy', 1);
 app.use(CookieParser());
 app.use(express.json());
 
+// AL PRINCIPIO de tu archivo, después de las importaciones
+console.log('🔍 VERIFICANDO VARIABLES DE ENTORNO:');
+console.log('EMAIL_USER existe?', !!process.env.EMAIL_USER);
+console.log('EMAIL_PASS existe?', !!process.env.EMAIL_PASS);
+console.log('EMAIL_USER valor:', process.env.EMAIL_USER ? process.env.EMAIL_USER.substring(0, 5) + '...' : 'NO DEFINIDO');
+
 // Configuración de CORS única y limpia
 const ALLOWED_ORIGINS = [
     'https://tesis-blockchain-frontend.vercel.app',
