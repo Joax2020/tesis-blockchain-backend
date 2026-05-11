@@ -1,0 +1,32 @@
+# Secretos y Configuración
+.env
+.env.local
+.env.production
+.env.development.local
+.env.test.local
+
+# Dependencias de Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Logs y Temporales
+logs
+*.log
+npm-debug.log*
+.eslintcache
+
+# Carpetas de sistema
+.DS_Store
+Thumbs.db
+
+# Blockchain (Solo si tienes las llaves privadas dentro del backend)
+wallet/
+vars/
+
+# Ignorar archivos subidos localmente
+uploads/*.pdf
+uploads/*.docx
+uploads/*.jpg
+uploads/*.png
