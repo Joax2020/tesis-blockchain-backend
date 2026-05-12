@@ -2,12 +2,9 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken'); // 👈 1. Importamos la fábrica de tokens
 const crypto = require('crypto'); // 👈 Importamos crypto (ya viene con Node.js)
-
+const nodemailer = require('nodemailer');
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID); // 👈 Tu variable de entorno
-const { Resend } = require('resend');
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 // 📧 CONFIGURACIÓN DEL CARTERO (Nodemailer)
 // 📧 CONFIGURACIÓN DEL CARTERO (Nodemailer) - VERSIÓN MEJORADA
@@ -20,7 +17,15 @@ const generarToken = (user) => {
     );
 };
 
-
+const transporter = nodemailer.createTransport({
+    host: 'smtp-relay.brevo.com',
+    port: 587,
+    secure: false,
+    auth: {
+        user: process.env.BREVO_SMTP_USER,
+        pass: process.env.BREVO_SMTP_PASS
+    }
+});
 
 const register = async (req, res) => {
     try {
@@ -30,7 +35,6 @@ const register = async (req, res) => {
             return res.status(400).json({ error: 'Token de seguridad faltante.' });
         }
 
-        // Verificación de reCAPTCHA
         const secretKey = process.env.RECAPTCHA_SECRET;
         const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${captchaToken}`;
         const googleResponse = await fetch(verifyUrl, { method: 'POST' });
@@ -49,49 +53,31 @@ const register = async (req, res) => {
         const newUser = new User({ email, password, fullName, verificationToken });
         await newUser.save();
 
-        // 💌 ENVÍO DE CORREO CON MANEJO DE ERRORES MEJORADO
         const enlaceVerificacion = `${process.env.BACKEND_URL}/auth/verify/${verificationToken}`;
-        
-        const mailOptions = {
-            from: `"Gestor Documental" <${process.env.EMAIL_USER}>`,
-            to: newUser.email,
-            subject: '🎓 Verifica tu cuenta en el Gestor Documental',
-            html: `
-                <div style="font-family: Arial, sans-serif; padding: 20px; text-align: center;">
-                    <h2 style="color: #646cff;">¡Bienvenido, ${fullName}!</h2>
-                    <p>Gracias por registrarte en nuestra plataforma descentralizada.</p>
-                    <p>Para activar tu cuenta, por favor haz clic en el siguiente botón:</p>
-                    <a href="${enlaceVerificacion}" style="background-color: #2ecc71; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-top: 10px;">Verificar mi Correo</a>
-                    <p style="margin-top: 20px; font-size: 0.8rem; color: #666;">Si el botón no funciona, copia y pega este enlace en tu navegador:<br>${enlaceVerificacion}</p>
-                </div>
-            `
-        };
 
-        // Envío con async/await para manejar errores correctamente
         try {
-    const { data, error: resendError } = await resend.emails.send({
-        from: 'Gestor Documental <onboarding@resend.dev>',
-        to: newUser.email,
-        subject: '🎓 Verifica tu cuenta en el Gestor Documental',
-        html: `
-            <div style="font-family: Arial, sans-serif; padding: 20px; text-align: center;">
-                <h2 style="color: #646cff;">¡Bienvenido, ${fullName}!</h2>
-                <p>Gracias por registrarte en nuestra plataforma descentralizada.</p>
-                <p>Para activar tu cuenta, haz clic en el siguiente botón:</p>
-                <a href="${enlaceVerificacion}" style="background-color: #2ecc71; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-top: 10px;">Verificar mi Correo</a>
-                <p style="margin-top: 20px; font-size: 0.8rem; color: #666;">Si el botón no funciona, copia este enlace:<br>${enlaceVerificacion}</p>
-            </div>
-        `
-    });
-
-    if (resendError) {
-        console.error('❌ Error Resend:', resendError);
-    } else {
-        console.log('✅ Correo enviado con Resend, ID:', data.id);
-    }
-} catch (emailError) {
-    console.error('❌ Error enviando correo:', emailError);
-}
+            const info = await transporter.sendMail({
+                from: '"Gestor Documental" <noreply@docuchain.com>',
+                to: newUser.email,
+                subject: '🎓 Verifica tu cuenta en el Gestor Documental',
+                html: `
+                    <div style="font-family: Arial, sans-serif; padding: 20px; text-align: center;">
+                        <h2 style="color: #646cff;">¡Bienvenido, ${fullName}!</h2>
+                        <p>Gracias por registrarte en nuestra plataforma descentralizada.</p>
+                        <p>Para activar tu cuenta, haz clic en el siguiente botón:</p>
+                        <a href="${enlaceVerificacion}" style="background-color: #2ecc71; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-top: 10px;">
+                            Verificar mi Correo
+                        </a>
+                        <p style="margin-top: 20px; font-size: 0.8rem; color: #666;">
+                            Si el botón no funciona, copia este enlace:<br>${enlaceVerificacion}
+                        </p>
+                    </div>
+                `
+            });
+            console.log('✅ Correo enviado con Brevo, ID:', info.messageId);
+        } catch (emailError) {
+            console.error('❌ Error enviando correo:', emailError);
+        }
         
         res.status(201).json({ 
             message: 'Registro exitoso. Revisa tu correo electrónico para verificar tu cuenta.',
