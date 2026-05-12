@@ -11,28 +11,7 @@ const documentRoutes = require('./routes/documentRoutes');
 
 const net = require('net');
 
-app.get('/test-smtp', (req, res) => {
-    const socket = new net.Socket();
-    const host = 'smtp.gmail.com';
-    const port = 587;
-    
-    socket.setTimeout(5000);
-    
-    socket.connect(port, host, () => {
-        res.json({ status: '✅ Puerto 587 ABIERTO', host, port });
-        socket.destroy();
-    });
-    
-    socket.on('error', (err) => {
-        res.json({ status: '❌ Puerto 587 BLOQUEADO', error: err.message });
-        socket.destroy();
-    });
-    
-    socket.on('timeout', () => {
-        res.json({ status: '❌ Timeout - Puerto probablemente bloqueado' });
-        socket.destroy();
-    });
-});
+
 
 const app = express();
 
@@ -94,6 +73,29 @@ const authLimiter = rateLimit({
 app.use('/uploads', express.static('uploads'));
 app.use('/auth', authLimiter, authRoutes);
 app.use('/', documentRoutes);
+
+app.get('/test-smtp', (req, res) => {
+    const socket = new net.Socket();
+    const host = 'smtp.gmail.com';
+    const port = 587;
+    
+    socket.setTimeout(5000);
+    
+    socket.connect(port, host, () => {
+        res.json({ status: '✅ Puerto 587 ABIERTO', host, port });
+        socket.destroy();
+    });
+    
+    socket.on('error', (err) => {
+        res.json({ status: '❌ Puerto 587 BLOQUEADO', error: err.message });
+        socket.destroy();
+    });
+    
+    socket.on('timeout', () => {
+        res.json({ status: '❌ Timeout - Puerto probablemente bloqueado' });
+        socket.destroy();
+    });
+});
 
 // 5. ARRANQUE DEL SERVIDOR
 const iniciarServidor = async () => {
